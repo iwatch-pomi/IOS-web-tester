@@ -3,6 +3,7 @@ import { FileUpload, type UploadedFile } from './components/FileUpload';
 import { CodePanel } from './components/CodePanel';
 import { PreviewPane } from './components/PreviewPane';
 import { examples } from './examples';
+import { hasUserApp, userAppFiles } from './userApp';
 import './app.css';
 
 interface SourceFile {
@@ -10,8 +11,13 @@ interface SourceFile {
   code: string;
 }
 
+// Default to the user's own app/ sources when present, otherwise the first example.
+const initialFiles: SourceFile[] = hasUserApp
+  ? userAppFiles.map((f) => ({ name: f.name, code: f.code }))
+  : [{ name: (examples[0]?.id ?? 'ContentView') + '.swift', code: examples[0]?.code ?? '' }];
+
 export default function App() {
-  const [files, setFiles] = useState<SourceFile[]>([{ name: examples[0]?.id + '.swift', code: examples[0]?.code ?? '' }]);
+  const [files, setFiles] = useState<SourceFile[]>(initialFiles);
   const [active, setActive] = useState(0);
 
   const activeFile = files[active] ?? files[0];
@@ -26,6 +32,11 @@ export default function App() {
   };
 
   const loadExample = (id: string) => {
+    if (id === '__myapp') {
+      setFiles(userAppFiles.map((f) => ({ name: f.name, code: f.code })));
+      setActive(0);
+      return;
+    }
     const ex = examples.find((e) => e.id === id);
     if (!ex) return;
     setFiles([{ name: ex.id + '.swift', code: ex.code }]);
@@ -44,7 +55,8 @@ export default function App() {
         </div>
         <div className="header-actions">
           <select className="example-select" defaultValue="" onChange={(e) => e.target.value && loadExample(e.target.value)}>
-            <option value="">サンプルを読み込む…</option>
+            <option value="">読み込む…</option>
+            {hasUserApp && <option value="__myapp">★ あなたのアプリ (app/)</option>}
             {examples.map((e) => (
               <option key={e.id} value={e.id}>
                 {e.label}
